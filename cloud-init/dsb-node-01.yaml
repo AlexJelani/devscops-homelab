@@ -62,9 +62,9 @@ write_files:
             - grafana_data:/var/lib/grafana
           networks:
             - monitoring
-          environment:
-          - GF_SERVER_ROOT_URL=http://151.145.79.89/grafana/ # Updated to new public IP
-          - GF_SERVER_DOMAIN=151.145.79.89 # Updated to new public IP
+          environment: # Update with actual public IP or DNS name
+          - GF_SERVER_ROOT_URL=http://140.245.86.104/grafana/ # Updated to new public IP
+          - GF_SERVER_DOMAIN=140.245.86.104 # Updated to new public IP
           - GF_SERVER_HTTP_PORT=3000 # This is the internal port Grafana listens on
           - GF_SERVER_PROTOCOL=http # The protocol Nginx uses to talk to Grafana
           - GF_SECURITY_ADMIN_USER=admin # Example, consider changing
