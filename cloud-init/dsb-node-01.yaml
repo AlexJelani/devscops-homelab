@@ -18,7 +18,6 @@ write_files:
   - path: /opt/dsb-homelab/docker-compose.yml
     permissions: '0755'
     content: |
-      version: '3.8'
 
       services:
         nginx:
@@ -91,7 +90,7 @@ write_files:
           restart: unless-stopped
 
         pygoat:
-          image: your_pygoat_image:latest # Replace with your actual PyGoat image
+      image: adeyosemanputra/pygoat:latest 
           container_name: pygoat
           ports:
             - "8000:8000" # Keep for direct access if needed, NGINX will be primary

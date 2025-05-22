@@ -17,7 +17,6 @@ write_files:
   - path: /opt/dsb-hub/docker-compose.yml
     permissions: '0755'
     content: |
-      version: '3.8'
 
       services:
         nginx:
