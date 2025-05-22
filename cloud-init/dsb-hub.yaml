@@ -14,23 +14,199 @@ packages:
   - software-properties-common
 
 write_files:
-  - path: /opt/dsb-homelab/start-services.sh
+  - path: /opt/dsb-hub/docker-compose.yml
     permissions: '0755'
     content: |
-      #!/bin/bash
-      cd /opt/dsb-homelab/gitea && docker-compose up -d
-      cd /opt/dsb-homelab/jenkins && docker-compose up -d
-      cd /opt/dsb-homelab/sonarqube && docker-compose up -d
-      cd /opt/dsb-homelab/nexus && docker-compose up -d
-      cd /opt/dsb-homelab/trivy && docker-compose up -d
-      systemctl restart nginx
+      version: '3.8'
+
+      services:
+        nginx:
+          image: nginx:1.25.4 # Pinned version
+          container_name: nginx
+          ports:
+            - "80:80"
+          volumes:
+            - ./nginx:/etc/nginx/conf.d
+          networks:
+            - backend
+          restart: unless-stopped
+
+        gitea:
+          image: gitea/gitea:1.21.11 # Pinned version
+          container_name: gitea
+          environment:
+            - USER_UID=1000
+            - USER_GID=1000
+            - GITEA__database__DB_TYPE=sqlite3
+          volumes:
+            - gitea_data:/data
+          ports:
+            - "3000:3000"
+            - "222:22"
+          networks:
+            - backend
+          restart: unless-stopped
+
+        jenkins:
+          image: jenkins/jenkins:2.426.3-lts-jdk17 # Pinned LTS version
+          container_name: jenkins
+          user: root
+          volumes:
+            - jenkins_home:/var/jenkins_home
+            - /var/run/docker.sock:/var/run/docker.sock
+          ports:
+            - "8080:8080"
+            - "50000:50000"
+          networks:
+            - backend
+          restart: unless-stopped
+
+        sonarqube:
+          image: sonarqube:9.9.4-community # Pinned LTS version
+          container_name: sonarqube
+          environment:
+            - SONAR_JDBC_URL=jdbc:postgresql://sonarqube-db:5432/sonar
+            - SONAR_JDBC_USERNAME=sonar
+            - SONAR_JDBC_PASSWORD=sonar # For simplicity in cloud-init; consider secrets management for production
+          volumes:
+            - sonarqube_data:/opt/sonarqube/data
+            - sonarqube_extensions:/opt/sonarqube/extensions
+            - sonarqube_logs:/opt/sonarqube/logs
+          ports:
+            - "9000:9000"
+          networks:
+            - backend
+          depends_on:
+            - sonarqube-db
+          restart: unless-stopped
+
+        sonarqube-db:
+          image: postgres:13.14 # Pinned version
+          container_name: sonarqube-db
+          environment:
+            - POSTGRES_USER=sonar
+            - POSTGRES_PASSWORD=sonar # For simplicity in cloud-init
+            - POSTGRES_DB=sonar
+          volumes:
+            - sonarqube_db:/var/lib/postgresql/data
+          networks:
+            - backend
+          restart: unless-stopped
+
+        nexus:
+          image: sonatype/nexus3:3.68.1 # Pinned version
+          container_name: nexus
+          volumes:
+            - nexus_data:/nexus-data
+          ports:
+            - "8081:8081"
+          networks:
+            - backend
+          restart: unless-stopped
+
+        trivy:
+          image: aquasec/trivy:0.50.1 # Pinned version
+          container_name: trivy
+          volumes:
+            - trivy_cache:/root/.cache
+          command: server --listen 0.0.0.0:8080
+          ports:
+            - "8082:8080"
+          networks:
+            - backend
+          restart: unless-stopped
+
+        prometheus:
+          image: prom/prometheus:v2.51.2 # Pinned version
+          container_name: prometheus
+          ports:
+            - "9090:9090"
+          volumes:
+            - ./prometheus:/etc/prometheus
+          networks:
+            - backend
+          command:
+            - '--config.file=/etc/prometheus/prometheus.yml'
+          restart: unless-stopped
+
+        grafana:
+          image: grafana/grafana:10.4.2 # Pinned version
+          container_name: grafana
+          ports:
+            - "3001:3000"
+          volumes:
+            - grafana_data:/var/lib/grafana
+          networks:
+            - backend
+          restart: unless-stopped
+
+      networks:
+        backend:
+          driver: bridge
+
+      volumes:
+        gitea_data:
+        jenkins_home:
+        sonarqube_data:
+        sonarqube_extensions:
+        sonarqube_logs:
+        sonarqube_db:
+        nexus_data:
+        trivy_cache:
+        grafana_data:
+
+  - path: /opt/dsb-hub/nginx/default.conf
+    permissions: '0644'
+    content: |
+      server {
+          listen 80;
+          server_name localhost;
+
+          location / {
+              root /usr/share/nginx/html;
+              index index.html index.htm;
+          }
+
+          error_page 500 502 503 504 /50x.html;
+          location = /50x.html {
+              root /usr/share/nginx/html;
+          }
+      }
+
+  - path: /opt/dsb-hub/prometheus/prometheus.yml
+    permissions: '0644'
+    content: |
+      global:
+        scrape_interval: 15s
+      scrape_configs:
+        - job_name: 'prometheus'
+          static_configs:
+            - targets: ['localhost:9090']
+        # Add more scrape configs here for other services if needed
+        # Example:
+        # - job_name: 'gitea'
+        #   static_configs:
+        #     - targets: ['gitea:3000'] # Assuming gitea exposes metrics
 
 runcmd:
+  # Create project directory
+  - mkdir -p /opt/dsb-hub/nginx
+  - mkdir -p /opt/dsb-hub/prometheus
+
+  # Install Docker
   - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
   - echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
   - apt-get update
-  - apt-get install -y docker-ce docker-ce-cli containerd.io
+  # Install Docker CE, CLI, Containerd, and Docker Compose plugin
+  - apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
   - systemctl enable docker
   - systemctl start docker
-  - mkdir -p /opt/dsb-homelab/{gitea,jenkins,sonarqube,nexus,trivy}
-  - bash /opt/dsb-homelab/start-services.sh
+
+  # Add ubuntu user to docker group
+  - usermod -aG docker ubuntu
+
+  # Start services using Docker Compose
+  # Run as ubuntu user to ensure correct context if needed, though for system services this might also be run by root.
+  # For simplicity and consistency with potential user-specific volume mounts in future, using su.
+  - su - ubuntu -c "cd /opt/dsb-hub && docker compose pull"
+  - su - ubuntu -c "cd /opt/dsb-hub && docker compose up -d"
