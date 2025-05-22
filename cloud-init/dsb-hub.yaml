@@ -1,0 +1,36 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+
+packages:
+  - curl
+  - wget
+  - gnupg
+  - lsb-release
+  - apt-transport-https
+  - ca-certificates
+  - unzip
+  - git
+  - software-properties-common
+
+write_files:
+  - path: /opt/dsb-homelab/start-services.sh
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      cd /opt/dsb-homelab/gitea && docker-compose up -d
+      cd /opt/dsb-homelab/jenkins && docker-compose up -d
+      cd /opt/dsb-homelab/sonarqube && docker-compose up -d
+      cd /opt/dsb-homelab/nexus && docker-compose up -d
+      cd /opt/dsb-homelab/trivy && docker-compose up -d
+      systemctl restart nginx
+
+runcmd:
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+  - echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+  - apt-get update
+  - apt-get install -y docker-ce docker-ce-cli containerd.io
+  - systemctl enable docker
+  - systemctl start docker
+  - mkdir -p /opt/dsb-homelab/{gitea,jenkins,sonarqube,nexus,trivy}
+  - bash /opt/dsb-homelab/start-services.sh
