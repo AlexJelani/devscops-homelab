@@ -11,6 +11,6 @@ scrape_configs:
     static_configs:
       - targets: ['node-exporter:9100']
 
-  - job_name: 'pygoat'
+  - job_name: 'juice-shop' # Changed job name
     static_configs:
-      - targets: ['pygoat:8000']
+      - targets: ['juice-shop:3000'] # Changed service name and internal port
