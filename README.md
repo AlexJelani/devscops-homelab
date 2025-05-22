@@ -1,130 +1,161 @@
-# DevSecOps Home Lab
+## devscops-homelab
 
-**Author:** Damien Burks (Implementation by Bolt)
+**Author:** Damien Burks (Original Concept)
+**Implementation:** [Your Name/Handle]
 
-## Overview
+### Overview
 
-This repository contains everything you need to set up a comprehensive DevSecOps Home Lab in the Oracle Cloud Infrastructure (OCI) Free Tier. The lab simulates a real-world environment for testing, learning, and enhancing your DevSecOps skills with hands-on experience using various tools and technologies.
+Welcome to the DevSecOps Home Lab project! This project guides you through setting up a comprehensive home lab environment designed to simulate a real-world infrastructure for testing, learning, and enhancing your DevSecOps skills. Leveraging Infrastructure as Code (Terraform) and cloud-init for automation, this lab provides hands-on experience with a variety of tools and technologies commonly used in the DevSecOps ecosystem, all deployed using Docker and Docker Compose.
 
-## Architecture
+Whether you're using physical servers at home or cloud-based virtual machines, this setup aims to provide a consistent and automated deployment process.
 
-The architecture is divided across two servers:
+### Architecture Overview
 
-![Architecture Diagram](https://i.ibb.co/cXW65fq/devsecops-architecture.png)
+The lab architecture is designed across two primary servers to separate infrastructure services from the core DevSecOps toolchain.
 
-### Server 1: dsb-node-01
-This server is responsible for hosting essential infrastructure services:
-- NGINX: Web server and reverse proxy
-- Docker: Containerization engine
-- Containerized Web Application (includes PyGoat)
-- Prometheus: Metrics collection and monitoring
-- Grafana: Visual dashboards for system metrics
+*(Note: You would typically include an Architecture Diagram here)*
 
-### Server 2: dsb-hub
-This server hosts the DevSecOps toolchain:
-- NGINX: Web server and reverse proxy
-- Gitea: Self-hosted Git service
-- SonarQube: Code quality and security scanning
-- Jenkins: CI/CD automation
-- Trivy: Container vulnerability scanning
-- Nexus: Repository manager
-- Docker: Containerization engine
+#### Server: dsb-node-01
 
-## Prerequisites
+This server hosts essential infrastructure services, laying the foundation for containerized environments and monitoring.
 
-- Oracle Cloud Infrastructure (OCI) Free Tier account
-- Terraform installed on your local machine
-- OCI CLI configured with API key
-- Basic understanding of Linux commands
-- SSH client installed on your local machine
+-   **NGINX:** Acts as a web server and reverse proxy, routing incoming traffic to the appropriate service.
+-   **Docker:** Provides containerization capabilities.
+-   **Containerized Web Application (PyGoat):** A sample application running in a Docker container for testing and scanning.
+-   **Prometheus:** Collects and monitors system and application metrics.
+-   **Grafana:** Provides visual dashboards for observing metrics and logs.
+-   **Node Exporter:** Collects host-level metrics for Prometheus.
 
-## Getting Started
+#### Server: dsb-hub
 
-### 1. Setting Up OCI Infrastructure with Terraform
+Dedicated to handling the DevSecOps toolchain, this server focuses on source code management, security scanning, continuous integration, and continuous delivery (CI/CD).
 
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/yourusername/devsecops-homelab.git
-   cd devsecops-homelab
-   ```
+-   **NGINX:** Handles traffic management and routing for services on this server.
+-   **Gitea:** A lightweight, self-hosted Git service for version control.
+-   **SonarQube:** Used for continuous code quality and security checks.
+-   **Jenkins:** Automates the CI/CD pipeline.
+-   **Trivy:** Performs vulnerability scanning for container images and filesystems.
+-   **Nexus:** Manages dependencies, artifacts, and binaries.
+-   **Docker:** Used for containerizing applications and services.
 
-2. Configure Terraform:
-   ```bash
-   cd terraform
-   cp terraform.tfvars.example terraform.tfvars
-   ```
+### Prerequisites
 
-3. Edit `terraform.tfvars` with your OCI credentials and configuration:
-   ```hcl
-   tenancy_ocid     = "your_tenancy_ocid"
-   user_ocid        = "your_user_ocid"
-   fingerprint      = "your_api_key_fingerprint"
-   private_key_path = "path_to_your_private_key"
-   region           = "your_region"
-   compartment_ocid = "your_compartment_ocid"
-   ```
+Before you begin, ensure you have the following:
 
-4. Initialize and apply Terraform configuration:
-   ```bash
-   terraform init
-   terraform plan
-   terraform apply
-   ```
+-   An Oracle Cloud Infrastructure (OCI) account with necessary permissions to create Compute instances, VCNs, Subnets, Security Lists, and Internet Gateways.
+-   Terraform installed locally.
+-   OCI CLI configured locally and authenticated to your tenancy. Terraform will use this configuration.
+-   An SSH key pair. The public key will be injected into the instances by Terraform for access. Ensure your public key file path is correctly configured in your Terraform variables (e.g., `variables.tf`).
+-   (Optional but Recommended) Docker and Docker Compose installed locally if you plan to test or build images locally before deployment.
 
-5. Note the output IP addresses for both servers.
+### Setup
 
-### 2. Installing Base Components
+This project uses Terraform to provision the OCI infrastructure and cloud-init to automatically configure the instances and deploy services using Docker Compose on first boot.
 
-1. SSH into each server and run the initial setup scripts:
-   - For dsb-node-01: `bash <(curl -s https://raw.githubusercontent.com/yourusername/devsecops-homelab/main/scripts/setup-node.sh)`
-   - For dsb-hub: `bash <(curl -s https://raw.githubusercontent.com/yourusername/devsecops-homelab/main/scripts/setup-hub.sh)`
+1.  **Navigate to the Terraform directory:**
+    ```bash
+    cd terraform
+    ```
 
-### 3. Configuring Individual Services
+2.  **Initialize Terraform:**
+    ```bash
+    terraform init
+    ```
+    This downloads the necessary OCI provider plugin.
 
-Follow the detailed guides for each service:
-- [NGINX Configuration](docs/nginx-setup.md)
-- [Docker Setup](docs/docker-setup.md)
-- [Prometheus & Grafana](docs/monitoring-setup.md)
-- [Gitea Configuration](docs/gitea-setup.md)
-- [Jenkins Pipeline Setup](docs/jenkins-setup.md)
-- [SonarQube Integration](docs/sonarqube-setup.md)
-- [Trivy Scanner Setup](docs/trivy-setup.md)
-- [Nexus Repository](docs/nexus-setup.md)
-- [PyGoat Vulnerability Lab](docs/pygoat-setup.md)
+3.  **Review the Plan:**
+    ```bash
+    terraform plan
+    ```
+    Review the proposed infrastructure changes. This should show 9 resources to be added (VCN, subnets, security lists, internet gateway, route table, and the two compute instances). Pay attention to the security list ingress rules to ensure the necessary ports (especially 22 for SSH and 80 for NGINX) are open from your IP or `0.0.0.0/0` for testing.
 
-## Accessing Your Services
+4.  **Apply the Configuration:**
+    ```bash
+    terraform apply
+    ```
+    Type `yes` when prompted to create the resources. Terraform will provision the VCN, subnets, security lists, and launch the two compute instances.
 
-Once setup is complete, you can access all services through your browser:
+5.  **Wait for Cloud-init to Complete:**
+    Once `terraform apply` finishes, the instances will begin booting. The cloud-init scripts embedded by Terraform will automatically run. This process involves:
+    -   Updating packages.
+    -   Installing Docker and the Docker Compose plugin.
+    -   Writing the `docker-compose.yml` and NGINX configuration files to `/opt/dsb-homelab/` (on dsb-node-01) and `/opt/dsb-hub/` (on dsb-hub).
+    -   Adding the `ubuntu` user to the `docker` group.
+    -   Pulling all necessary Docker images.
+    -   Starting all services using `docker compose up -d`.
 
-| Service    | URL                            |
-|------------|---------------------------------|
-| Grafana    | http://dsb-node-01:3000        |
-| Prometheus | http://dsb-node-01:9090        |
-| PyGoat     | http://dsb-node-01:8000        |
-| Gitea      | http://dsb-hub:3000            |
-| Jenkins    | http://dsb-hub:8080            |
-| SonarQube  | http://dsb-hub:9000            |
-| Nexus      | http://dsb-hub:8081            |
+    This process can take **5-15 minutes** or longer depending on network speed and the number of images.
 
-## Learning Paths
+6.  **Verify Deployment (Optional but Recommended):**
+    -   After waiting, SSH into each instance using the public IPs provided in the `terraform apply` output (e.g., `ssh ubuntu@<dsb-node-01-public-ip>`).
+    -   Check the cloud-init logs: `cat /var/log/cloud-init-output.log`
+    -   Verify Docker is running: `systemctl status docker`
+    -   Check running containers: `docker ps`
 
-This home lab is designed to help you learn various aspects of DevSecOps:
+### Accessing the Lab
 
-1. **Infrastructure as Code**: Learn how to provision and manage cloud infrastructure using Terraform
-2. **Infrastructure Management**: Learn how to set up and maintain containerized applications
-3. **Monitoring and Observability**: Use Prometheus and Grafana to monitor system health
-4. **Security Testing**: Practice vulnerability scanning with Trivy and PyGoat
-5. **CI/CD Pipeline**: Build automated workflows with Jenkins and integrate with security tools
-6. **Code Quality**: Implement code quality checks with SonarQube
+Once cloud-init has completed and the containers are running, you can access the services via the public IP addresses of the instances using the NGINX reverse proxies.
 
-## Troubleshooting
+-   **dsb-node-01 (Monitoring & App):** `http://<dsb-node-01-public-ip>/`
+    -   Prometheus: `http://<dsb-node-01-public-ip>/prometheus/`
+    -   Grafana: `http://<dsb-node-01-public-ip>/grafana/`
+    -   PyGoat: `http://<dsb-node-01-public-ip>/pygoat/`
 
-Check the [troubleshooting guide](docs/troubleshooting.md) for common issues and their solutions.
+-   **dsb-hub (DevSecOps Tools):** `http://<dsb-hub-public-ip>/`
+    -   Gitea: `http://<dsb-hub-public-ip>/gitea/`
+    -   Jenkins: `http://<dsb-hub-public-ip>/jenkins/`
+    -   SonarQube: `http://<dsb-hub-public-ip>/sonarqube/`
+    -   Nexus: `http://<dsb-hub-public-ip>/nexus/`
+    -   Trivy API (if exposed via Nginx): `http://<dsb-hub-public-ip>/trivyapi/`
 
-## Contributing
+*(Note: Replace `<dsb-node-01-public-ip>` and `<dsb-hub-public-ip>` with the actual IPs from your `terraform apply` output.)*
 
-Feel free to submit issues or pull requests to improve this home lab setup.
+### Post-Deployment Configuration (Important!)
 
-## License
+While cloud-init automates the initial setup, most of the web applications (Gitea, Jenkins, SonarQube, Grafana, Nexus) need to be configured *internally* to correctly handle being served under a sub-path by NGINX (e.g., `/gitea/` instead of `/`).
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+You will likely need to SSH into the instances and configure each application's base URL or context path. Refer to the comments in the NGINX configuration files (`cloud-init/dsb-node-01.yaml` and `cloud-init/dsb-hub.yaml`) and the documentation for each specific tool for details on how to set their context paths or root URLs.
+
+For example:
+-   **Grafana:** Ensure the `GF_SERVER_ROOT_URL` environment variable is set correctly (e.g., `http://<dsb-node-01-public-ip>/grafana/`). This is attempted in the cloud-init, but you may need to adjust the IP.
+-   **Gitea:** Edit the `app.ini` file inside the Gitea container and set `ROOT_URL`.
+-   **Jenkins:** Configure the "Jenkins URL" in the Jenkins web UI under "Manage Jenkins" -> "Configure System". You might also need a startup parameter.
+-   **SonarQube:** Set the `sonar.web.context` property.
+-   **Nexus:** Configure the context path in its properties file.
+
+Failure to perform these steps will result in broken links and incorrect behavior when accessing the applications via NGINX.
+
+### What You'll Learn
+
+By completing this project, you will gain hands-on experience in:
+
+-   **Infrastructure as Code:** Using Terraform to provision cloud resources (OCI).
+-   **Cloud-init:** Automating server configuration on first boot.
+-   **Docker & Docker Compose:** Deploying and managing multi-container applications.
+-   **Containerization:** Understanding isolated application environments.
+-   **Web Traffic Management:** Configuring Nginx as a reverse proxy.
+-   **Monitoring:** Setting up Prometheus and Grafana.
+-   **Security Scanning:** Integrating tools like SonarQube and Trivy.
+-   **CI/CD Fundamentals:** Working with Jenkins.
+-   **Artifact Management:** Using Nexus.
+
+### Cleanup
+
+To destroy the resources created by Terraform and avoid incurring costs, navigate back to the `terraform` directory and run:
+
+```bash
+terraform destroy
+```
+Type `yes` when prompted. This will tear down all the infrastructure components created by your Terraform configuration.
+
+### Contributing
+
+*(Optional: Add information on how others can contribute if this is a public repository)*
+
+### License
+
+*(Optional: Add license information)*
+
+---
+
+*(Based on the original concept by Damien Burks)*
