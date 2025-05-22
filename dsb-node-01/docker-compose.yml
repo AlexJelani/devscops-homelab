@@ -24,8 +24,8 @@ services:
     container_name: grafana
     volumes:
       - grafana_data:/var/lib/grafana
-    ports:
-      - "3001:3000" # Changed to avoid conflict if NGINX uses 3000, or keep 3000 if NGINX proxies to it. Let's assume NGINX proxies to 3000.
+ports: # Assuming you want to match the current running state and NGINX config
+      - "3000:3000"
     restart: unless-stopped
     networks:
       - monitoring
