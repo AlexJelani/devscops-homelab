@@ -101,8 +101,9 @@ write_files:
             - nexus_data:/nexus-data
           ports:
             - "8081:8081"
-          environment:
+          environment: # Add - INSTALL4J_ADD_VM_PARAMS to reduce memory, adjust values as needed
             - NEXUS_CONTEXT=nexus # Configure Nexus to run under /nexus context path
+            - INSTALL4J_ADD_VM_PARAMS="-Xms1024m -Xmx1024m -XX:MaxDirectMemorySize=1024m -Djava.util.prefs.userRoot=/nexus-data/javaprefs"
           networks:
             - backend
           restart: unless-stopped
