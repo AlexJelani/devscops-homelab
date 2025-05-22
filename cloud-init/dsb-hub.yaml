@@ -21,7 +21,8 @@ write_files:
 
       services:
         nginx:
-          image: nginx:1.25.4 # Pinned version
+          # Use a standard NGINX image, the config will define the proxying
+          image: nginx:latest
           container_name: nginx
           ports:
             - "80:80"
@@ -116,30 +117,6 @@ write_files:
             - backend
           restart: unless-stopped
 
-        prometheus:
-          image: prom/prometheus:v2.51.2 # Pinned version
-          container_name: prometheus
-          ports:
-            - "9090:9090"
-          volumes:
-            - ./prometheus:/etc/prometheus
-          networks:
-            - backend
-          command:
-            - '--config.file=/etc/prometheus/prometheus.yml'
-          restart: unless-stopped
-
-        grafana:
-          image: grafana/grafana:10.4.2 # Pinned version
-          container_name: grafana
-          ports:
-            - "3001:3000"
-          volumes:
-            - grafana_data:/var/lib/grafana
-          networks:
-            - backend
-          restart: unless-stopped
-
       networks:
         backend:
           driver: bridge
@@ -153,18 +130,63 @@ write_files:
         sonarqube_db:
         nexus_data:
         trivy_cache:
-        grafana_data:
 
+  # Correct NGINX configuration for reverse proxying services on dsb-hub
   - path: /opt/dsb-hub/nginx/default.conf
     permissions: '0644'
     content: |
       server {
           listen 80;
-          server_name localhost;
+          server_name dsb-hub.local; # Or your server's IP/hostname
 
-          location / {
-              root /usr/share/nginx/html;
-              index index.html index.htm;
+          # Proxy to Gitea
+          location /gitea/ {
+              proxy_pass http://gitea:3000/;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+              # Note: Gitea's ROOT_URL in its app.ini might need to be set to 'http://<your_domain_or_ip>/gitea/'
+          }
+
+          # Proxy to Jenkins
+          location /jenkins/ {
+              proxy_pass http://jenkins:8080/;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+              # Note: Jenkins URL in 'Manage Jenkins -> Configure System' might need to be set.
+              # Also, running Jenkins with --prefix=/jenkins might be required.
+          }
+
+          # Proxy to SonarQube
+          location /sonarqube/ {
+              proxy_pass http://sonarqube:9000/;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+              # Note: SonarQube's 'sonar.web.context' property might need to be set to '/sonarqube'.
+          }
+
+          # Proxy to Nexus
+          location /nexus/ {
+              proxy_pass http://nexus:8081/;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+              # Note: Nexus might require context path configuration.
+          }
+
+          # Proxy to Trivy server API (if needed via NGINX)
+          location /trivyapi/ {
+              proxy_pass http://trivy:8080/; # Trivy's internal port
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
           }
 
           error_page 500 502 503 504 /50x.html;
@@ -173,6 +195,7 @@ write_files:
           }
       }
 
+  # Remove Prometheus configuration as it belongs on dsb-node-01
   - path: /opt/dsb-hub/prometheus/prometheus.yml
     permissions: '0644'
     content: |
@@ -182,16 +205,14 @@ write_files:
         - job_name: 'prometheus'
           static_configs:
             - targets: ['localhost:9090']
-        # Add more scrape configs here for other services if needed
-        # Example:
-        # - job_name: 'gitea'
-        #   static_configs:
-        #     - targets: ['gitea:3000'] # Assuming gitea exposes metrics
+      # This file is likely not needed if Prometheus is on dsb-node-01
 
 runcmd:
   # Create project directory
   - mkdir -p /opt/dsb-hub/nginx
   - mkdir -p /opt/dsb-hub/prometheus
+  # Clean up prometheus directory if it's not needed on this node
+  - rm -rf /opt/dsb-hub/prometheus # Remove if Prometheus is moved to dsb-node-01
 
   # Install Docker
   - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg

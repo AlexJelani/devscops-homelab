@@ -78,6 +78,25 @@ services:
     networks:
       - devsecops
 
+  nginx:
+    image: nginx:latest
+    container_name: nginx_hub
+    ports:
+      - "80:80"
+      # - "443:443" # Optionally, if you set up SSL
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # - ./nginx/ssl:/etc/nginx/ssl:ro # Optionally, for SSL certificates
+    depends_on:
+      - gitea
+      - jenkins
+      - sonarqube
+      - nexus
+      - trivy
+    networks:
+      - devsecops
+    restart: unless-stopped
+
 networks:
   devsecops:
     driver: bridge

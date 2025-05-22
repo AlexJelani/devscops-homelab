@@ -14,20 +14,169 @@ packages:
   - software-properties-common
 
 write_files:
-  - path: /opt/dsb-homelab/start-services.sh
+  # Define the main docker-compose.yml for dsb-node-01
+  - path: /opt/dsb-homelab/docker-compose.yml
     permissions: '0755'
     content: |
-      #!/bin/bash
-      cd /opt/dsb-homelab/monitoring && docker-compose up -d
-      cd /opt/dsb-homelab/pygoat && docker-compose up -d
-      systemctl restart nginx
+      version: '3.8'
+
+      services:
+        nginx:
+          image: nginx:latest
+          container_name: nginx_node_01
+          ports:
+            - "80:80"
+          volumes:
+            - ./nginx:/etc/nginx/conf.d
+          networks:
+            - monitoring
+          depends_on:
+            - prometheus
+            - grafana
+            - pygoat
+          restart: unless-stopped
+
+        prometheus:
+          image: prom/prometheus:v2.51.2 # Pinned version
+          container_name: prometheus
+          ports:
+            - "9090:9090" # Keep for direct access if needed, NGINX will be primary
+          volumes:
+            - ./prometheus:/etc/prometheus
+            - prometheus_data:/prometheus # For persistent data
+          networks:
+            - monitoring
+          command:
+            - '--config.file=/etc/prometheus/prometheus.yml'
+            - '--storage.tsdb.path=/prometheus'
+            - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+            - '--web.console.templates=/usr/share/prometheus/consoles'
+            - '--web.enable-lifecycle'
+          restart: unless-stopped
+
+        grafana:
+          image: grafana/grafana:10.4.2 # Pinned version
+          container_name: grafana
+          ports:
+            - "3000:3000" # NGINX will proxy to this internal port
+          volumes:
+            - grafana_data:/var/lib/grafana
+          networks:
+            - monitoring
+          environment:
+            # Configure Grafana to be aware of the sub-path proxying
+            - GF_SERVER_ROOT_URL=http://dsb-node-01.local/grafana/ # Or your server's IP/hostname
+            - GF_SERVER_DOMAIN=dsb-node-01.local # Or your server's IP/hostname
+            - GF_SERVER_HTTP_PORT=3000
+            - GF_SERVER_PROTOCOL=http
+            # Optional: Set admin password (consider using a .env file for secrets)
+            # - GF_SECURITY_ADMIN_PASSWORD=devsecopshomelab
+          restart: unless-stopped
+
+        nodeexporter:
+          image: quay.io/prometheus/node-exporter:v1.7.0 # Pinned version
+          container_name: nodeexporter
+          ports:
+            - "9100:9100"
+          volumes:
+            - /proc:/host/proc:ro
+            - /sys:/host/sys:ro
+            - /:/host/:ro,rslave
+          command:
+            - '--path.proc=/host/proc'
+            - '--path.sys=/host/sys'
+            - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($|/)'
+          networks:
+            - monitoring
+          restart: unless-stopped
+
+        pygoat:
+          image: your_pygoat_image:latest # Replace with your actual PyGoat image
+          container_name: pygoat
+          ports:
+            - "8000:8000" # Keep for direct access if needed, NGINX will be primary
+          restart: unless-stopped
+          # command: sh -c "cd /app && python manage.py runserver 0.0.0.0:8000" # Add if your image needs a specific startup command
+          networks:
+            - monitoring
+
+      networks:
+        monitoring:
+          driver: bridge
+
+      volumes:
+        prometheus_data:
+        grafana_data:
+
+  # Define the NGINX configuration for reverse proxying services on dsb-node-01
+  - path: /opt/dsb-homelab/nginx/default.conf
+    permissions: '0644'
+    content: |
+      server {
+          listen 80;
+          server_name dsb-node-01.local; # Or your server's IP/hostname
+
+          location /prometheus/ {
+              proxy_pass http://prometheus:9090/;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+          }
+
+          location /grafana/ {
+              proxy_pass http://grafana:3000/;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+              # Note: Grafana requires GF_SERVER_ROOT_URL to be set for sub-path hosting.
+          }
+
+          location /pygoat/ {
+              proxy_pass http://pygoat:8000/;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+          }
+      }
+
+  # Define the Prometheus configuration
+  - path: /opt/dsb-homelab/prometheus/prometheus.yml
+    permissions: '0644'
+    content: |
+      global:
+        scrape_interval: 15s
+
+      scrape_configs:
+        - job_name: 'prometheus'
+          static_configs:
+            - targets: ['localhost:9090']
+
+        - job_name: 'node-exporter'
+          static_configs:
+            - targets: ['nodeexporter:9100']
+
+        # Add scrape config for PyGoat if it exposes metrics
+        # - job_name: 'pygoat'
+        #   static_configs:
+        #     - targets: ['pygoat:8000'] # Assuming PyGoat exposes metrics on port 8000
 
 runcmd:
   - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
   - echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
   - apt-get update
-  - apt-get install -y docker-ce docker-ce-cli containerd.io
+  # Install Docker CE, CLI, Containerd, and Docker Compose plugin
+  - apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
   - systemctl enable docker
   - systemctl start docker
-  - mkdir -p /opt/dsb-homelab/{monitoring,nginx,pygoat}
-  - bash /opt/dsb-homelab/start-services.sh
+  # Create directories for volumes and configs
+  - mkdir -p /opt/dsb-homelab/nginx
+  - mkdir -p /opt/dsb-homelab/prometheus
+  # Add ubuntu user to docker group
+  - usermod -aG docker ubuntu
+  # Start services using Docker Compose
+  # Run as ubuntu user to ensure correct context if needed
+  - su - ubuntu -c "cd /opt/dsb-homelab && docker compose pull"
+  - su - ubuntu -c "cd /opt/dsb-homelab && docker compose up -d"
