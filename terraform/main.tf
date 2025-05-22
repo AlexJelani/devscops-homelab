@@ -263,6 +263,7 @@ resource "oci_core_instance" "dsb_node" {
 
   metadata = {
     ssh_authorized_keys = var.ssh_public_key
+    user_data           = base64encode(file("../cloud-init/dsb-node-01.yaml")) # Path relative to this main.tf
   }
 }
 
@@ -290,5 +291,6 @@ resource "oci_core_instance" "dsb_hub" {
 
   metadata = {
     ssh_authorized_keys = var.ssh_public_key
+    user_data           = base64encode(file("../cloud-init/dsb-hub.yaml")) # Path relative to this main.tf
   }
 }
