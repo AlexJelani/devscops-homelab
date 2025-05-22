@@ -197,33 +197,16 @@ write_files:
           }
       }
 
-  # Remove Prometheus configuration as it belongs on dsb-node-01
-  - path: /opt/dsb-hub/prometheus/prometheus.yml
+  # Kernel parameters for SonarQube/Elasticsearch
+  - path: /etc/sysctl.d/99-sonarqube-elasticsearch.conf
     permissions: '0644'
     content: |
-      global:
-        scrape_interval: 15s
-      scrape_configs:
-        - job_name: 'prometheus'
-          static_configs:
-            - targets: ['localhost:9090']
-      # This file is likely not needed if Prometheus is on dsb-node-01
+      vm.max_map_count=262144
+      fs.file-max=65536
 
 runcmd:
   # Create project directory
   - mkdir -p /opt/dsb-hub/nginx
-  - mkdir -p /opt/dsb-hub/prometheus
-  # Clean up prometheus directory if it's not needed on this node
-  - rm -rf /opt/dsb-hub/prometheus # Remove if Prometheus is moved to dsb-node-01
-
-  # Install Docker
-  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-  - echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-  - apt-get update
-  # Install Docker CE, CLI, Containerd, and Docker Compose plugin
-  - apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-  - systemctl enable docker
-  - systemctl start docker
 
   # Add ubuntu user to docker group
   - usermod -aG docker ubuntu
@@ -233,3 +216,16 @@ runcmd:
   # For simplicity and consistency with potential user-specific volume mounts in future, using su.
   - su - ubuntu -c "cd /opt/dsb-hub && docker compose pull"
   - su - ubuntu -c "cd /opt/dsb-hub && docker compose up -d"
+
+  # Apply kernel parameters (moved here to ensure sysctl is available after package installs if it wasn't already)
+  # and to be one of the earlier setup steps.
+  - sysctl -p /etc/sysctl.d/99-sonarqube-elasticsearch.conf || sysctl -p # Apply specific file or all if specific fails
+
+  # Install Docker (ensure this runs after potential sysctl changes if Docker daemon is sensitive to them on start)
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+  - echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+  - apt-get update
+  # Install Docker CE, CLI, Containerd, and Docker Compose plugin
+  - apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+  - systemctl enable docker
+  - systemctl start docker
