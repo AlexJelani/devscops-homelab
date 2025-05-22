@@ -90,7 +90,7 @@ write_files:
           restart: unless-stopped
 
         pygoat:
-      image: adeyosemanputra/pygoat:latest 
+          image: adeyosemanputra/pygoat:latest 
           container_name: pygoat
           ports:
             - "8000:8000" # Keep for direct access if needed, NGINX will be primary
