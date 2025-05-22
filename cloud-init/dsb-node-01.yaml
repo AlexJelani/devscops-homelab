@@ -90,15 +90,15 @@ write_files:
           restart: unless-stopped
 
         pygoat:
-          image: adeyosemanputra/pygoat:latest 
-          container_name: pygoat
+          image: bkimminich/juice-shop:latest # Using OWASP Juice Shop
+          container_name: juice-shop # Renaming container for clarity
           ports:
-            - "8000:8000" # Keep for direct access if needed, NGINX will be primary
+            - "8000:3000" # Map host port 8000 to Juice Shop's internal port 3000
           restart: unless-stopped
           # command: sh -c "cd /app && python manage.py runserver 0.0.0.0:8000" # Add if your image needs a specific startup command
           networks:
             - monitoring
-
+ 
       networks:
         monitoring:
           driver: bridge
@@ -132,8 +132,8 @@ write_files:
               # Note: Grafana requires GF_SERVER_ROOT_URL to be set for sub-path hosting.
           }
 
-          location /pygoat/ {
-              proxy_pass http://pygoat:8000/;
+          location /juice-shop/ { # Update Nginx location to match the new app name
+              proxy_pass http://juice-shop:3000/; # Proxy to the container name and its internal port (3000 for Juice Shop)
               proxy_set_header Host $host;
               proxy_set_header X-Real-IP $remote_addr;
               proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -158,9 +158,10 @@ write_files:
             - targets: ['nodeexporter:9100']
 
         # Add scrape config for PyGoat if it exposes metrics
-        # - job_name: 'pygoat'
+        # Add scrape config for Juice Shop if it exposes metrics
+        # - job_name: 'juice-shop'
         #   static_configs:
-        #     - targets: ['pygoat:8000'] # Assuming PyGoat exposes metrics on port 8000
+        #     - targets: ['juice-shop:3000'] # Assuming Juice Shop exposes metrics on port 3000
 
 runcmd:
   - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
