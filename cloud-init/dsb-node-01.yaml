@@ -21,7 +21,7 @@ write_files:
 
       services:
         nginx:
-          image: nginx:latest
+          image: nginx:1.25.5 # Or any recent stable version
           container_name: nginx_node_01
           ports:
             - "80:80"
@@ -62,14 +62,13 @@ write_files:
             - grafana_data:/var/lib/grafana
           networks:
             - monitoring
-          environment:
-            # Configure Grafana to be aware of the sub-path proxying
-            - GF_SERVER_ROOT_URL=http://dsb-node-01.local/grafana/ # Or your server's IP/hostname
-            - GF_SERVER_DOMAIN=dsb-node-01.local # Or your server's IP/hostname
-            - GF_SERVER_HTTP_PORT=3000
-            - GF_SERVER_PROTOCOL=http
-            # Optional: Set admin password (consider using a .env file for secrets)
-            # - GF_SECURITY_ADMIN_PASSWORD=devsecopshomelab
+        environment: # Update with actual public IP or DNS name
+          - GF_SERVER_ROOT_URL=http://138.2.12.255/grafana/ # Replace with actual IP/DNS if it changes
+          - GF_SERVER_DOMAIN=138.2.12.255 # Replace with actual IP/DNS if it changes
+          - GF_SERVER_HTTP_PORT=3000 # This is the internal port Grafana listens on
+          - GF_SERVER_PROTOCOL=http # The protocol Nginx uses to talk to Grafana
+          - GF_SECURITY_ADMIN_USER=admin # Example, consider changing
+          - GF_SECURITY_ADMIN_PASSWORD=devsecopshomelab # Example, consider changing
           restart: unless-stopped
 
         nodeexporter:
@@ -90,7 +89,7 @@ write_files:
           restart: unless-stopped
 
         pygoat:
-          image: bkimminich/juice-shop:latest # Using OWASP Juice Shop
+          image: bkimminich/juice-shop:v16.0.0 # Example: Pin to a specific version
           container_name: juice-shop # Renaming container for clarity
           ports:
             - "8000:3000" # Map host port 8000 to Juice Shop's internal port 3000
