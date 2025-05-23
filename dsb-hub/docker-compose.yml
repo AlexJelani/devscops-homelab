@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   gitea:
     image: gitea/gitea:latest
@@ -7,6 +5,8 @@ services:
     environment:
       - USER_UID=1000
       - USER_GID=1000
+      # Configure Gitea for subpath access. Replace 131.186.56.105 with your dsb-hub IP or hostname.
+      - GITEA__server__ROOT_URL=http://131.186.56.105/gitea/
       - GITEA__database__DB_TYPE=sqlite3
     volumes:
       - gitea_data:/data
@@ -20,6 +20,8 @@ services:
     image: jenkins/jenkins:lts
     container_name: jenkins
     user: root
+    environment: # Add environment section for Jenkins
+      - JENKINS_OPTS=--prefix=/jenkins # Configure Jenkins for /jenkins subpath
     volumes:
       - jenkins_home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
@@ -35,6 +37,9 @@ services:
     environment:
       - SONAR_JDBC_URL=jdbc:postgresql://sonarqube-db:5432/sonar
       - SONAR_JDBC_USERNAME=sonar
+      - SONAR_WEB_CONTEXT=/sonarqube # Configure SonarQube for /sonarqube subpath
+      # Disable Elasticsearch bootstrap checks for development/testing if memory is constrained.
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
       - SONAR_JDBC_PASSWORD=sonar
     volumes:
       - sonarqube_data:/opt/sonarqube/data
@@ -60,21 +65,32 @@ services:
   nexus:
     image: sonatype/nexus3:latest
     container_name: nexus
+    # If you encounter "exec format error" on your ARM64 dsb-hub, uncomment the line below.
+    platform: linux/arm64
+    # Note: Nexus subpath configuration is more complex and usually involves editing nexus.properties or setting specific Java opts.
     volumes:
       - nexus_data:/nexus-data
     ports:
       - "8081:8081"
     networks:
       - devsecops
-
-  trivy:
-    image: aquasec/trivy:latest
-    container_name: trivy
+ 
+  snyk:
+    image: snyk/snyk:golang # General purpose Snyk CLI image
+    container_name: snyk
+    restart: unless-stopped
+    environment:
+      # IMPORTANT: Set your SNYK_TOKEN.
+      # You can set this directly, or use an .env file and reference it as ${SNYK_TOKEN}
+      - SNYK_TOKEN=YOUR_SNYK_TOKEN_HERE
     volumes:
-      - trivy_cache:/root/.cache
-    command: server --listen 0.0.0.0:8080
-    ports:
-      - "8082:8080"
+      - snyk_cache:/home/node/.cache # Snyk and other tools might use this
+      - /var/run/docker.sock:/var/run/docker.sock # For Snyk to scan Docker images on the host
+      # Example: Mount a directory with your code to scan it
+      # - ./my-project-to-scan:/mnt/app
+    working_dir: /mnt # Default directory when you exec into the container
+    # Keep the container running so you can exec into it
+    command: tail -f /dev/null
     networks:
       - devsecops
 
@@ -92,7 +108,7 @@ services:
       - jenkins
       - sonarqube
       - nexus
-      - trivy
+      - snyk # Updated dependency
     networks:
       - devsecops
     restart: unless-stopped
@@ -109,4 +125,4 @@ volumes:
   sonarqube_logs:
   sonarqube_db:
   nexus_data:
-  trivy_cache:
+  snyk_cache:
