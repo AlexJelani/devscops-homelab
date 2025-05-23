@@ -3,7 +3,7 @@ services:
     image: prom/prometheus:latest
     container_name: prometheus
     volumes:
-      - ./prometheus:/etc/prometheus
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -11,7 +11,8 @@ services:
       - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.enable-lifecycle'
-      # Configure Prometheus for subpath access. Replace with your actual IP or hostname if not 131.186.37.96
+      # This line tells Prometheus its externally reachable URL,
+      # including the subpath, so it generates correct internal links.
       - '--web.external-url=http://131.186.37.96/prometheus/'
     ports:
       - "9090:9090" # Keep for direct access if needed, NGINX will be primary
