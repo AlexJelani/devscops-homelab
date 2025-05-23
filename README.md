@@ -21,7 +21,7 @@ This server hosts essential infrastructure services, laying the foundation for c
 
 -   **NGINX:** Acts as a web server and reverse proxy, routing incoming traffic to the appropriate service.
 -   **Docker:** Provides containerization capabilities.
--   **Containerized Web Application (PyGoat):** A sample application running in a Docker container for testing and scanning.
+-   **Containerized Web Application (Juice Shop):** An intentionally insecure web application for security training, running in a Docker container for testing and scanning.
 -   **Prometheus:** Collects and monitors system and application metrics.
 -   **Grafana:** Provides visual dashboards for observing metrics and logs.
 -   **Node Exporter:** Collects host-level metrics for Prometheus.
@@ -99,7 +99,7 @@ Once cloud-init has completed and the containers are running, you can access the
 -   **dsb-node-01 (Monitoring & App):** `http://<dsb-node-01-public-ip>/`
     -   Prometheus: `http://<dsb-node-01-public-ip>/prometheus/`
     -   Grafana: `http://<dsb-node-01-public-ip>/grafana/`
-    -   PyGoat: `http://<dsb-node-01-public-ip>/pygoat/`
+    -   Juice Shop: `http://<dsb-node-01-public-ip>/juiceshop/` *(Assuming the Nginx path is `/juiceshop/`. Adjust if different.)*
 
 -   **dsb-hub (DevSecOps Tools):** `http://<dsb-hub-public-ip>/`
     -   Gitea: `http://<dsb-hub-public-ip>/gitea/`
