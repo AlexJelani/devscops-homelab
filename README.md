@@ -34,7 +34,7 @@ Dedicated to handling the DevSecOps toolchain, this server focuses on source cod
 -   **Gitea:** A lightweight, self-hosted Git service for version control.
 -   **SonarQube:** Used for continuous code quality and security checks.
 -   **Jenkins:** Automates the CI/CD pipeline.
--   **Trivy:** Performs vulnerability scanning for container images and filesystems.
+-   **Docker Scout:** Provides vulnerability scanning and supply chain insights for container images.
 -   **Nexus:** Manages dependencies, artifacts, and binaries.
 -   **Docker:** Used for containerizing applications and services.
 
