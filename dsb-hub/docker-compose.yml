@@ -74,25 +74,6 @@ services:
       - "8081:8081"
     networks:
       - devsecops
- 
-  snyk:
-    image: snyk/snyk:golang # General purpose Snyk CLI image
-    container_name: snyk
-    restart: unless-stopped
-    environment:
-      # IMPORTANT: Set your SNYK_TOKEN.
-      # You can set this directly, or use an .env file and reference it as ${SNYK_TOKEN}
-      - SNYK_TOKEN=YOUR_SNYK_TOKEN_HERE
-    volumes:
-      - snyk_cache:/home/node/.cache # Snyk and other tools might use this
-      - /var/run/docker.sock:/var/run/docker.sock # For Snyk to scan Docker images on the host
-      # Example: Mount a directory with your code to scan it
-      # - ./my-project-to-scan:/mnt/app
-    working_dir: /mnt # Default directory when you exec into the container
-    # Keep the container running so you can exec into it
-    command: tail -f /dev/null
-    networks:
-      - devsecops
 
   nginx:
     image: nginx:latest
@@ -108,7 +89,6 @@ services:
       - jenkins
       - sonarqube
       - nexus
-      - snyk # Updated dependency
     networks:
       - devsecops
     restart: unless-stopped
@@ -125,4 +105,3 @@ volumes:
   sonarqube_logs:
   sonarqube_db:
   nexus_data:
-  snyk_cache:
