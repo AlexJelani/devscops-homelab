@@ -1,21 +1,24 @@
-title = "Gitleaks Config"
+title = "Gitleaks Configuration"
+version = "8.24.3"
 
-# Allowlist (false positives)
 [allowlist]
-description = "Ignore test keys"
+description = "Ignored test patterns"
 regexes = [
   "EXAMPLE_KEY",
   "test_.*",
   "12345"
 ]
 
-# Custom rules
 [[rules]]
+id = "stripe-api-key"
+description = "Stripe API Key"
+regex = '''(?i)sk_(test|live)_[a-z0-9]{24}'''
+tags = ["stripe", "payment"]
+severity = "high"
+
+[[rules]]
+id = "generic-api-key" 
 description = "Generic API Key"
 regex = '''(?i)(API|SECRET)_?KEY\s*=\s*['"]?([a-z0-9]{8,64})['"]?'''
 tags = ["api-key", "hardcoded"]
-
-[[rules]]
-description = "Stripe Key"
-regex = '''(?i)sk_(test|live)_[a-z0-9]{24}'''
-tags = ["stripe", "payment"]
+severity = "high"
