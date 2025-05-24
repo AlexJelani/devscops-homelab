@@ -8,10 +8,11 @@ regexes = [
     '''test_.*''',     # Common prefix for test keys/secrets
     # Add other project-specific safe patterns here
 ]
-# paths = [ # Example of how to allowlist paths
-#   '''test/''',
-#   '''fixture(s)?/''',
-# ]
+paths = [
+    '''\.md$''', # Exclude all Markdown files
+    # You can add other paths to exclude here, for example:
+    # '''test/data/''', # Excludes a specific directory
+]
 
 [[rules]]
 id = "generic-api-key"
@@ -59,4 +60,3 @@ description = "Asymmetric Private Key (e.g., RSA, SSH, PGP)"
 regex = '''-----BEGIN ((EC|PGP|DSA|RSA|OPENSSH) )?PRIVATE KEY( BLOCK)?-----'''
 tags = ["key", "asymmetric", "privatekey", "ssh", "pgp"]
 severity = "critical"
-
