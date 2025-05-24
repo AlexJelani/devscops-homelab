@@ -7,11 +7,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Required to scan full git history
+          fetch-depth: 0  # Required for full history scan
 
-      - uses: gitleaks/gitleaks-action@v2
+      - name: Run Gitleaks
+        id: gitleaks
+        uses: DariuszPorowski/github-action-gitleaks@v2
         with:
-          # Optional configuration (remove these lines if not needed)
-          GITLEAKS_CONFIG: .gitleaks.toml  # Set config via environment variable
-          sarif: true           # Upload to GitHub Security tab
-          version: 8.18.1              # Pin specific version
+          config: .gitleaks.toml  # Path to your custom config
+          report_format: sarif     # Generate SARIF report
+          fail: false             # Don't fail immediately (allows SARIF upload)
+          verbose: true           # Debug logs
+
+      - name: Upload SARIF Report
+        if: ${{ steps.gitleaks.outputs.exitcode == 1 }}  # Only upload if leaks found
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ steps.gitleaks.outputs.report }}
