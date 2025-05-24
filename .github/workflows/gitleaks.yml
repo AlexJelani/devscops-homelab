@@ -1,0 +1,40 @@
+name: Secret Scan
+
+on: [push, pull_request]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Gitleaks
+        run: |
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks-linux-amd64 -o gitleaks
+          chmod +x gitleaks && sudo mv gitleaks /usr/local/bin
+
+      - name: Run Gitleaks secret scan
+        id: gitleaks
+        run: |
+          gitleaks detect \
+            --source=. \
+            --no-git \
+            --redact \
+            --report-format sarif \
+            --report-path=gitleaks.sarif || echo "exit_code=$?" >> $GITHUB_OUTPUT
+
+      - name: Upload SARIF report to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: gitleaks.sarif
+
+      - name: Fail if secrets were found
+        run: |
+          if [[ "${{ steps.gitleaks.outputs.exit_code }}" != "" && "${{ steps.gitleaks.outputs.exit_code }}" != "0" ]]; then
+            echo "❌ Gitleaks detected secrets in this PR!"
+            exit 1
+          else
+            echo "✅ No secrets detected."
+          fi
+
