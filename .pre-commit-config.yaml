@@ -1,5 +1,10 @@
 repos:
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.18.1
+    rev: v8.18.2 # Or the latest Gitleaks version
     hooks:
       - id: gitleaks
+        name: Detect hardcoded secrets
+        description: Detects hardcoded secrets like passwords, API keys, and tokens.
+        # Assumes .gitleaks.toml is in the repo root. Adjust path if necessary.
+        entry: gitleaks protect --staged -v --config=".gitleaks.toml"
+
