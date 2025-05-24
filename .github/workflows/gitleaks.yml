@@ -17,10 +17,25 @@ jobs:
         env:
           GITLEAKS_VERSION: v8.18.1 # Pin Gitleaks version (same as your pre-commit)
         run: |
-          VERSION_NUMBER=$(echo "${GITLEAKS_VERSION}" | sed 's/v//')
-          ASSET_URL="https://github.com/gitleaks/gitleaks/releases/download/${GITLEAKS_VERSION}/gitleaks_${VERSION_NUMBER}_linux_x86_64.tar.gz"
-          echo "Downloading Gitleaks from ${ASSET_URL}"
+          set -e # Exit immediately if a command exits with a non-zero status
+          set -x # Print commands and their arguments as they are executed
+
+          echo "Using GITLEAKS_VERSION: '${GITLEAKS_VERSION}'"
+
+          if [[ ! "${GITLEAKS_VERSION}" == v* ]]; then
+            echo "::error::GITLEAKS_VERSION (current: '${GITLEAKS_VERSION}') must start with 'v'. Please check the env variable."
+            exit 1
+          fi
+
+          VERSION_NO_V=$(echo "${GITLEAKS_VERSION}" | sed 's/^v//') # Remove 'v' only from the beginning
+          echo "Version without 'v' (VERSION_NO_V): '${VERSION_NO_V}'"
+
+          ASSET_URL="https://github.com/gitleaks/gitleaks/releases/download/${GITLEAKS_VERSION}/gitleaks_${VERSION_NO_V}_linux_x86_64.tar.gz"
+          echo "Constructed Asset URL: ${ASSET_URL}"
+
           curl -fsSL "${ASSET_URL}" -o gitleaks.tar.gz # Added -f to fail fast on HTTP errors
+          echo "Gitleaks download command executed." # To confirm curl completed if successful
+
           tar -xzf gitleaks.tar.gz gitleaks
           rm gitleaks.tar.gz
           chmod +x gitleaks
