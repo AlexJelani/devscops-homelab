@@ -60,18 +60,3 @@ regex = '''-----BEGIN ((EC|PGP|DSA|RSA|OPENSSH) )?PRIVATE KEY( BLOCK)?-----'''
 tags = ["key", "asymmetric", "privatekey", "ssh", "pgp"]
 severity = "critical"
 
-[[rules]]
-id = "generic-ipv4-address"
-description = "Detects IPv4 addresses. Review carefully, especially for public or unexpected IPs."
-# This regex matches any valid IPv4 address.
-regex = '''\b((?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b'''
-# Allowlist common private, loopback, and link-local addresses to reduce noise.
-keywords = ["ip", "address", "host"]
-allowlist.regexes = [
-    '''^10\.(\d{1,3}\.){2}\d{1,3}$''', # RFC1918 private 10.0.0.0/8
-    '''^172\.(1[6-9]|2[0-9]|3[0-1])\.(\d{1,3}\.){1}\d{1,3}$''', # RFC1918 private 172.16.0.0/12
-    '''^192\.168\.(\d{1,3}\.){1}\d{1,3}$''',                   # RFC1918 private 192.168.0.0/16
-    '''^169\.254\.(\d{1,3}\.){1}\d{1,3}$'''                    # Link-local
-]
-tags = ["network", "ip-address"]
-severity = "medium" # Adjust severity as needed (e.g., "high" if all non-private IPs are critical)
