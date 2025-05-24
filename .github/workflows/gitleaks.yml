@@ -1,28 +1,17 @@
-name: Secret Scan - Fixed Installation
-on: [push]
+name: Secret Scan
+on: [push, pull_request]
 
 jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required to scan full git history
 
-      - name: Install Gitleaks (Fixed)
-        run: |
-          # Download with verbose output for debugging
-          echo "Downloading Gitleaks..."
-          curl -v -L https://github.com/gitleaks/gitleaks/releases/download/v8.18.1/gitleaks_8.18.1_linux_x86_64.tar.gz -o gitleaks.tar.gz
-          
-          # Verify download
-          ls -lh gitleaks.tar.gz
-          file gitleaks.tar.gz
-          
-          # Extract carefully
-          tar -xzvf gitleaks.tar.gz
-          
-          # Install
-          sudo install gitleaks /usr/local/bin/
-          gitleaks version
-
-      - name: Run Basic Scan
-        run: gitleaks detect --source=. --no-git --exit-code 1
+      - uses: gitleaks/gitleaks-action@v2
+        with:
+          # Optional configuration (remove these lines if not needed)
+          config-path: .gitleaks.toml  # Path to custom config
+          sarif-upload: true           # Upload to GitHub Security tab
+          version: 8.18.1              # Pin specific version
