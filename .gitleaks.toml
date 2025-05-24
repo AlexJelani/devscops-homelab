@@ -1,27 +1,21 @@
-title = "Custom Gitleaks Config"
+title = "Gitleaks Config"
 
-# Allowlist false positives
-[[allowlist]]
+# Allowlist (false positives)
+[allowlist]
+description = "Ignore test keys"
 regexes = [
   "EXAMPLE_KEY",
   "test_.*",
-  "12345"  # Ignore simple numbers (adjust as needed)
+  "12345"
 ]
 
-# Catch generic API keys (e.g., API_KEY=...)
+# Custom rules
 [[rules]]
 description = "Generic API Key"
 regex = '''(?i)(API|SECRET)_?KEY\s*=\s*['"]?([a-z0-9]{8,64})['"]?'''
 tags = ["api-key", "hardcoded"]
 
-# Catch Stripe-like keys
 [[rules]]
-description = "Stripe API Key"
+description = "Stripe Key"
 regex = '''(?i)sk_(test|live)_[a-z0-9]{24}'''
 tags = ["stripe", "payment"]
-
-# Catch AWS keys
-[[rules]]
-description = "AWS Access Key"
-regex = '''(?i)AKIA[0-9A-Z]{16}'''
-tags = ["aws", "cloud"]

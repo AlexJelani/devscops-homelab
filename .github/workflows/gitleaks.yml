@@ -12,6 +12,6 @@ jobs:
       - uses: gitleaks/gitleaks-action@v2
         with:
           # Optional configuration (remove these lines if not needed)
-          config-path: .gitleaks.toml  # Path to custom config
-          sarif-upload: true           # Upload to GitHub Security tab
+          config: .gitleaks.toml  # Path to custom config
+          sarif: true           # Upload to GitHub Security tab
           version: 8.18.1              # Pin specific version
