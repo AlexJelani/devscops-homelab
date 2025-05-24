@@ -14,18 +14,22 @@ severity = "high"
 id = "generic-api-key"
 description = "Generic API Key"
 regex = '''(?i)(API|SECRET)_?KEY\s*=\s*['"]?([a-z0-9]{8,64})['"]?'''
+# By setting secretGroup = 2, only the key's value (the second capturing group) will be reported as the secret.
+secretGroup = 2
 severity = "high"
 
 [[rules]]
 id = "internal-ip-url"
 description = "Internal IP Address in URL"
 regex = '''(http|https):\/\/(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})(:\d+)?\/'''
+# By setting secretGroup = 2, only the IP address (the second capturing group) will be reported as the secret, not the port or protocol.
+secretGroup = 2
 tags = ["network", "internal-ip"]
 severity = "high"
 
 [[rules]]
 id = "generic-ipv4-address"
-description = "Detects IPv4 addresses. Review carefully, especially for public IPs."
+description = "Detects IPv4 addresses. Review carefully, especially for public or unexpected IPs."
 # This regex matches any valid IPv4 address.
 regex = '''\b((?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b'''
 keywords = ["ip", "address", "host"]
@@ -37,4 +41,14 @@ allowlist.regexes = [
     '''^192\.168\.(\d{1,3}\.){1}\d{1,3}$''' # RFC1918 private 192.168.0.0/16
 ]
 tags = ["network", "ip-address"]
-severity = "medium" # Adjust severity as needed
+severity = "medium" # Adjust severity as needed (e.g., "high" if all non-private IPs are critical)
+
+[[rules]]
+id = "generic-password-assignment"
+description = "Detects common password assignments in configurations."
+# Looks for keywords like password, pass, token, secret, key followed by an assignment.
+regex = '''(?i)\b(password|passwd|pwd|pass|token|secret|auth_key|api_key|access_key|private_key)\b\s*[:=]\s*['"]?([^\s'"`;]{5,128})['"]?'''
+secretGroup = 2 # Captures only the password value.
+keywords = ["password", "pass", "token", "secret", "key", "passwd", "pwd"]
+tags = ["credential", "password"]
+severity = "critical"
