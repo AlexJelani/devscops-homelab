@@ -1,4 +1,4 @@
-name: Basic Secret Scan
+name: Secret Scan - Fixed Installation
 on: [push]
 
 jobs:
@@ -7,8 +7,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run Gitleaks
+      - name: Install Gitleaks (Fixed)
         run: |
-          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.18.1/gitleaks_8.18.1_linux_x86_64.tar.gz | tar xz
-          chmod +x gitleaks
-          ./gitleaks detect --source=. --no-git --exit-code 1
+          # Download with verbose output for debugging
+          echo "Downloading Gitleaks..."
+          curl -v -L https://github.com/gitleaks/gitleaks/releases/download/v8.18.1/gitleaks_8.18.1_linux_x86_64.tar.gz -o gitleaks.tar.gz
+          
+          # Verify download
+          ls -lh gitleaks.tar.gz
+          file gitleaks.tar.gz
+          
+          # Extract carefully
+          tar -xzvf gitleaks.tar.gz
+          
+          # Install
+          sudo install gitleaks /usr/local/bin/
+          gitleaks version
+
+      - name: Run Basic Scan
+        run: gitleaks detect --source=. --no-git --exit-code 1
