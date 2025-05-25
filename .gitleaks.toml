@@ -10,8 +10,8 @@ regexes = [
 ]
 paths = [
     '''\.md$''', # Exclude all Markdown files
-    # You can add other paths to exclude here, for example:
-    # '''test/data/''', # Excludes a specific directory
+    '''\.gitleaks\.toml$''', # Exclude the gitleaks config file itself
+    '''test\.txt$''', # Exclude the specific test file
 ]
 
 [[rules]]
