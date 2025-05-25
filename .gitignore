@@ -1,28 +1,9 @@
-.aider*
-
-# Local .terraform directories
-**/.terraform/*
-
-# .tfstate files
-*.tfstate
-*.tfstate.*.backup
-
-# Crash log files
-crash.log
-crash.*.log
-
-# Exclude all .tfvars files, which are likely to contain sensitive data, by default
-*.tfvars
-
-# Exclude .tfvars.json files
-*.tfvars.json
-
-# Ignore override files as they are usually environment-specific
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
-
-# Terraform CLI configuration files
-.terraformrc
-terraform.rc
+# Ignore environment-specific configuration files
+dsb-node-01/.env
+dsb-hub/.env
+# Add other files and directories you want to ignore below
+# For example:
+# .DS_Store
+# *.log
+# /node_modules
+# /vendor

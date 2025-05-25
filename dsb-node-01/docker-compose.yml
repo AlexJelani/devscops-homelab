@@ -11,9 +11,9 @@ services:
       - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.enable-lifecycle'
-      # This line tells Prometheus its externally reachable URL,
-      # including the subpath, so it generates correct internal links.
-      - '--web.external-url=http://131.186.37.96/prometheus/'
+      # This line tells Prometheus its externally reachable URL.
+      # The IP address is sourced from the .env file (NODE_IP_ADDRESS).
+      - '--web.external-url=http://${NODE_IP_ADDRESS:-your_node_ip}/prometheus/'
     ports:
       - "9090:9090" # Keep for direct access if needed, NGINX will be primary
     restart: unless-stopped
@@ -30,9 +30,9 @@ services:
     restart: unless-stopped
     networks:
       - monitoring
-    environment:
-      # Configure Grafana for subpath access. Replace with your actual IP or hostname if not 131.186.37.96
-      - GF_SERVER_ROOT_URL=http://131.186.37.96/grafana/
+    environment: # Add environment section for Jenkins
+      # Configure Grafana for subpath access. The IP address is sourced from the .env file (NODE_IP_ADDRESS).
+      - GF_SERVER_ROOT_URL=http://${NODE_IP_ADDRESS:-your_node_ip}/grafana/
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=devsecopshomelab
       - GF_USERS_ALLOW_SIGN_UP=false

@@ -5,8 +5,8 @@ services:
     environment:
       - USER_UID=1000
       - USER_GID=1000
-      # Configure Gitea for subpath access. Replace 131.186.56.105 with your dsb-hub IP or hostname.
-      - GITEA__server__ROOT_URL=http://131.186.56.105/gitea/
+      # Configure Gitea for subpath access. The IP address is sourced from the .env file (HUB_IP_ADDRESS).
+      - GITEA__server__ROOT_URL=http://${HUB_IP_ADDRESS:-your_hub_ip}/gitea/
       - GITEA__database__DB_TYPE=sqlite3
     volumes:
       - gitea_data:/data
