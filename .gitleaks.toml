@@ -60,3 +60,11 @@ description = "Asymmetric Private Key (e.g., RSA, SSH, PGP)"
 regex = '''-----BEGIN ((EC|PGP|DSA|RSA|OPENSSH) )?PRIVATE KEY( BLOCK)?-----'''
 tags = ["key", "asymmetric", "privatekey", "ssh", "pgp"]
 severity = "critical"
+
+[[allowlist.rules]]
+   id = "generic-password-assignment"
+   paths = ['''^\.gitleaks\.toml$'''] # Regex matching the .gitleaks.toml file at the project root
+   description = "Allowlist generic password rule for example/config (e.g., line 19) within .gitleaks.toml itself."
+
+Explanation of the changes:
+
