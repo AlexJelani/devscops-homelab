@@ -15,6 +15,36 @@ services:
       - "222:22"
     networks:
       - devsecops
+  defectdojo:
+    image: defectdojo/defectdojo-django:latest
+    container_name: defectdojo
+    ports:
+      - "8082:8000"
+    environment:
+      - DD_DATABASE_URL=postgres://defectdojo:defectdojo@defectdojo-db:5432/defectdojo
+      - DD_SECRET_KEY=dsbhub-defectdojo-2024-homelab-super-secret-key-change-me-123456789
+      - DD_DEBUG=False
+      - DD_ALLOWED_HOSTS=*
+    volumes:
+      - defectdojo_data:/app
+    networks:
+      - devsecops
+    depends_on:
+      - defectdojo-db
+    restart: unless-stopped
+
+  defectdojo-db:
+    image: postgres:13
+    container_name: defectdojo-db
+    environment:
+      - POSTGRES_DB=defectdojo
+      - POSTGRES_USER=defectdojo
+      - POSTGRES_PASSWORD=defectdojo
+    volumes:
+      - defectdojo_db_data:/var/lib/postgresql/data
+    networks:
+      - devsecops
+    restart: unless-stopped
 
   jenkins:
     image: jenkins/jenkins:lts
@@ -105,3 +135,5 @@ volumes:
   sonarqube_logs:
   sonarqube_db:
   nexus_data:
+  defectdojo_data:
+  defectdojo_db_data:  # Add this line
