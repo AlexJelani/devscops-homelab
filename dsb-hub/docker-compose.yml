@@ -25,12 +25,57 @@ services:
       - DD_SECRET_KEY=dsbhub-defectdojo-2024-homelab-super-secret-key-change-me-123456789
       - DD_DEBUG=False
       - DD_ALLOWED_HOSTS=*
+      - DD_CELERY_BROKER_URL=redis://defectdojo-redis:6379/0
+      - DD_CELERY_RESULT_BACKEND=redis://defectdojo-redis:6379/0
+      - DD_INITIALIZE=true
+      - DD_ADMIN_USER=admin
+      - DD_ADMIN_MAIL=admin@defectdojo.local
+      - DD_ADMIN_PASSWORD=admin
+      - DD_ADMIN_FIRST_NAME=Administrator
+      - DD_ADMIN_LAST_NAME=User
     volumes:
-      - defectdojo_data:/app
+      - defectdojo_media:/app/media
     networks:
       - devsecops
     depends_on:
       - defectdojo-db
+      - defectdojo-redis
+    restart: unless-stopped
+
+  defectdojo-celery:
+    image: defectdojo/defectdojo-django:latest
+    container_name: defectdojo-celery
+    command: /entrypoint-celery-worker.sh
+    environment:
+      - DD_DATABASE_URL=postgres://defectdojo:defectdojo@defectdojo-db:5432/defectdojo
+      - DD_SECRET_KEY=dsbhub-defectdojo-2024-homelab-super-secret-key-change-me-123456789
+      - DD_CELERY_BROKER_URL=redis://defectdojo-redis:6379/0
+      - DD_CELERY_RESULT_BACKEND=redis://defectdojo-redis:6379/0
+    volumes:
+      - defectdojo_media:/app/media
+    networks:
+      - devsecops
+    depends_on:
+      - defectdojo-db
+      - defectdojo-redis
+    restart: unless-stopped
+
+  defectdojo-celery-beat:
+    image: defectdojo/defectdojo-django:latest
+    container_name: defectdojo-celery-beat
+    command: /entrypoint-celery-beat.sh
+    environment:
+      - DD_DATABASE_URL=postgres://defectdojo:defectdojo@defectdojo-db:5432/defectdojo
+      - DD_SECRET_KEY=dsbhub-defectdojo-2024-homelab-super-secret-key-change-me-123456789
+      - DD_CELERY_BROKER_URL=redis://defectdojo-redis:6379/0
+      - DD_CELERY_RESULT_BACKEND=redis://defectdojo-redis:6379/0
+    volumes:
+      - defectdojo_media:/app/media
+    networks:
+      - devsecops
+    depends_on:
+      - defectdojo-db
+      - defectdojo-redis
     restart: unless-stopped
 
   defectdojo-db:
@@ -45,6 +90,31 @@ services:
     networks:
       - devsecops
     restart: unless-stopped
+
+  defectdojo-redis:
+    image: redis:7.2-alpine
+    container_name: defectdojo-redis
+    volumes:
+      - defectdojo_redis_data:/data
+    networks:
+      - devsecops
+    restart: unless-stopped
+
+  defectdojo-nginx:
+    image: defectdojo/defectdojo-nginx:latest
+    container_name: defectdojo-nginx
+    ports:
+      - "8083:8080"
+    environment:
+      - NGINX_METRICS_ENABLED=false
+    volumes:
+      - defectdojo_media:/usr/share/nginx/html/media
+    networks:
+      - devsecops
+    depends_on:
+      - defectdojo
+    restart: unless-stopped
+
 
   jenkins:
     image: jenkins/jenkins:lts
@@ -119,6 +189,7 @@ services:
       - jenkins
       - sonarqube
       - nexus
+      - defectdojo-nginx
     networks:
       - devsecops
     restart: unless-stopped
@@ -135,5 +206,6 @@ volumes:
   sonarqube_logs:
   sonarqube_db:
   nexus_data:
-  defectdojo_data:
   defectdojo_db_data:  # Add this line
+  defectdojo_media:  # Add this line
+  defectdojo_redis_data:  # Add this line
