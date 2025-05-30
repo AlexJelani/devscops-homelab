@@ -37,12 +37,12 @@ services:
     volumes:
       - defectdojo_media:/app/media
     networks:
-      - devsecops
+      devsecops:
+        aliases:
+          - uwsgi
     depends_on:
       - defectdojo-db
       - defectdojo-redis
-
-
     restart: unless-stopped
   defectdojo-celery:
     image: defectdojo/defectdojo-django:latest
@@ -216,13 +216,35 @@ networks:
 
 volumes:
   gitea_data:
+    external: true
+    name: dsb-hub_gitea_data
   jenkins_home:
+    external: true
+    name: dsb-hub_jenkins_home
   sonarqube_data:
+    external: true
+    name: sonarqube_data
   sonarqube_extensions:
+    external: true
+    name: sonarqube_extensions
   sonarqube_logs:
+    external: true
+    name: sonarqube_logs
   sonarqube_db:
+    external: true
+    name: sonarqube_db
   nexus_data:
+    external: true
+    name: dsb-hub_nexus_data
   defectdojo_db_data:
+    external: true
+    name: dsb-hub_defectdojo_db_data
   defectdojo_media:
+    external: true
+    name: dsb-hub_defectdojo_media
   defectdojo_redis_data:
-  trivy_cache:  # Add Trivy cache volume
+    external: true
+    name: dsb-hub_defectdojo_redis_data
+  trivy_cache:
+    external: true
+    name: trivy_cache
