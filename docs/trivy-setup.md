@@ -279,3 +279,72 @@ sudo docker-compose restart
 4. **Ignore file**: Use `.trivyignore` for false positives
 5. **Cache management**: Mount cache volume for faster repeated scans
 6. **Focus on fixable issues**: Prioritize vulnerabilities with available fixes
+
+## Installing Trivy on dsb-node-01 (Infrastructure Node)
+
+While Trivy is primarily integrated with your DevSecOps toolchain on dsb-hub, you may also want to run Trivy on dsb-node-01 to scan running containers, the host filesystem, or local images for vulnerabilities and misconfigurations.
+
+### Manual Installation (Recommended)
+
+1. Create a directory for Trivy (optional, for organizing scan reports or cache):
+
+```bash
+sudo mkdir -p /opt/dsb-homelab/trivy
+```
+
+2. Run Trivy as a one-off Docker container for scanning:
+
+- Scan a running container (replace `<container_name>`):
+
+```bash
+docker run --rm --network host -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image <container_name>
+```
+
+- Scan the host filesystem (e.g., `/etc`, `/home`, or a project directory):
+
+```bash
+docker run --rm -v /:/host aquasec/trivy fs /host
+```
+
+- Scan a local image:
+
+```bash
+docker run --rm aquasec/trivy image <local_image_name>
+```
+
+3. (Optional) To run Trivy as a service on dsb-node-01, create a Docker Compose file at `/opt/dsb-homelab/trivy/docker-compose.yml` similar to the dsb-hub setup, but ensure the port does not conflict with other services:
+
+```yaml
+version: '3.8'
+services:
+  trivy:
+    image: aquasec/trivy:latest
+    container_name: trivy
+    volumes:
+      - trivy_cache:/root/.cache
+    command: server --listen 0.0.0.0:8083
+    ports:
+      - "8083:8080"
+    restart: unless-stopped
+    networks:
+      - devsecops
+volumes:
+  trivy_cache:
+networks:
+  devsecops:
+    driver: bridge
+```
+
+Then start the service:
+
+```bash
+cd /opt/dsb-homelab/trivy
+sudo docker-compose up -d
+```
+
+You can now access the Trivy server API on dsb-node-01 at `http://dsb-node-01:8083/healthz`.
+
+### Notes
+- Use Trivy on dsb-node-01 for scanning running containers, the host filesystem, or local images.
+- For CI/CD and automated image/repo scanning, continue to use the Trivy setup on dsb-hub.
+- Adjust ports as needed to avoid conflicts with other services.

@@ -194,6 +194,18 @@ services:
       - devsecops
     restart: unless-stopped
 
+  trivy:
+    image: aquasec/trivy:latest
+    container_name: trivy
+    command: server --listen 0.0.0.0:8080
+    ports:
+      - "8084:8080" # Expose Trivy server on 8084 (host) to 8080 (container)
+    volumes:
+      - trivy_cache:/root/.cache
+    networks:
+      - devsecops
+    restart: unless-stopped
+
 networks:
   devsecops:
     driver: bridge
@@ -206,6 +218,7 @@ volumes:
   sonarqube_logs:
   sonarqube_db:
   nexus_data:
-  defectdojo_db_data:  # Add this line
-  defectdojo_media:  # Add this line
-  defectdojo_redis_data:  # Add this line
+  defectdojo_db_data:
+  defectdojo_media:
+  defectdojo_redis_data:
+  trivy_cache:  # Add Trivy cache volume
