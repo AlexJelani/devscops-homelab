@@ -26,6 +26,7 @@ services:
       - DD_DEBUG=False
       - DD_ALLOWED_HOSTS=*
       - DD_CELERY_BROKER_URL=redis://defectdojo-redis:6379/0
+      - DD_UWSGI_PORT=3031 # Configure uWSGI to listen on port 3031
       - DD_CELERY_RESULT_BACKEND=redis://defectdojo-redis:6379/0
       - DD_INITIALIZE=true
       - DD_ADMIN_USER=admin
@@ -40,8 +41,9 @@ services:
     depends_on:
       - defectdojo-db
       - defectdojo-redis
-    restart: unless-stopped
 
+
+    restart: unless-stopped
   defectdojo-celery:
     image: defectdojo/defectdojo-django:latest
     container_name: defectdojo-celery
@@ -107,6 +109,8 @@ services:
       - "8083:8080"
     environment:
       - NGINX_METRICS_ENABLED=false
+      - UWSGI_HOST=defectdojo  # Use the service name instead of "uwsgi"
+      - UWSGI_PORT=3031
     volumes:
       - defectdojo_media:/usr/share/nginx/html/media
     networks:
