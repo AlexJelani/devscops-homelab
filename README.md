@@ -21,7 +21,7 @@ This server hosts essential infrastructure services, laying the foundation for c
 
 -   **NGINX:** Acts as a web server and reverse proxy, routing incoming traffic to the appropriate service.
 -   **Docker:** Provides containerization capabilities.
--   **Containerized Web Application (Juice Shop):** An intentionally insecure web application for security training, running in a Docker container for testing and scanning.
+-   **Containerized Web Application (Pygoat):** An intentionally insecure web application for security training, running in a Docker container for testing and scanning.
 -   **Prometheus:** Collects and monitors system and application metrics.
 -   **Grafana:** Provides visual dashboards for observing metrics and logs.
 -   **Node Exporter:** Collects host-level metrics for Prometheus.
@@ -34,7 +34,7 @@ Dedicated to handling the DevSecOps toolchain, this server focuses on source cod
 -   **Gitea:** A lightweight, self-hosted Git service for version control.
 -   **SonarQube:** Used for continuous code quality and security checks.
 -   **Jenkins:** Automates the CI/CD pipeline.
--   **Docker Scout:** Provides vulnerability scanning and supply chain insights for container images.
+-   **Trivy:** Provides vulnerability scanning and supply chain insights for container images.
 -   **Nexus:** Manages dependencies, artifacts, and binaries.
 -   **Docker:** Used for containerizing applications and services.
 
