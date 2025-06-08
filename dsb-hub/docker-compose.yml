@@ -209,6 +209,21 @@ services:
     networks:
       - devsecops
     restart: unless-stopped
+    
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres_password
+      - POSTGRES_DB=postgres_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - devsecops
+    restart: unless-stopped
 
 networks:
   devsecops:
@@ -248,3 +263,6 @@ volumes:
   trivy_cache:
     external: true
     name: trivy_cache
+  postgres_data:
+    external: true
+    name: dsb-hub_postgres_data
