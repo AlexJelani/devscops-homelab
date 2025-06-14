@@ -1,11 +1,11 @@
-## devscops-homelab
+## DevSecOps Homelab
 
 **Author:** Damien Burks (Original Concept)
-**Implementation:** [Jelani Alexander]
+**Implementation:** Jelani Alexander
 
 ### Overview
 
-Welcome to the DevSecOps Home Lab project! This project guides you through setting up a comprehensive home lab environment designed to simulate a real-world infrastructure for testing, learning, and enhancing your DevSecOps skills. Leveraging Infrastructure as Code (Terraform) and cloud-init for automation, this lab provides hands-on experience with a variety of tools and technologies commonly used in the DevSecOps ecosystem, all deployed using Docker and Docker Compose.
+Welcome to the DevSecOps Home Lab project! This project provides a comprehensive home lab environment designed to simulate a real-world infrastructure for testing, learning, and enhancing your DevSecOps skills. Leveraging Docker and Docker Compose, this lab provides hands-on experience with a variety of tools and technologies commonly used in the DevSecOps ecosystem.
 
 Whether you're using physical servers at home or cloud-based virtual machines, this setup aims to provide a consistent and automated deployment process.
 
@@ -36,125 +36,107 @@ Dedicated to handling the DevSecOps toolchain, this server focuses on source cod
 -   **Jenkins:** Automates the CI/CD pipeline.
 -   **Trivy:** Provides vulnerability scanning and supply chain insights for container images.
 -   **Nexus:** Manages dependencies, artifacts, and binaries.
+-   **DefectDojo:** An open-source vulnerability management tool that streamlines the testing process.
+-   **PostgreSQL:** Database for storing application data.
 -   **Docker:** Used for containerizing applications and services.
 
-### Prerequisites
+### Current Setup
 
-Before you begin, ensure you have the following:
+The current implementation focuses on the dsb-hub server, which hosts the core DevSecOps toolchain. All services are containerized using Docker and orchestrated with Docker Compose.
 
--   An Oracle Cloud Infrastructure (OCI) account with necessary permissions to create Compute instances, VCNs, Subnets, Security Lists, and Internet Gateways.
--   Terraform installed locally.
--   OCI CLI configured locally and authenticated to your tenancy. Terraform will use this configuration.
--   An SSH key pair. The public key will be injected into the instances by Terraform for access. Ensure your public key file path is correctly configured in your Terraform variables (e.g., `variables.tf`).
--   (Optional but Recommended) Docker and Docker Compose installed locally if you plan to test or build images locally before deployment.
+### Services and Access Points
 
-### Setup
+All services are accessible through an NGINX reverse proxy that routes requests to the appropriate containers:
 
-This project uses Terraform to provision the OCI infrastructure and cloud-init to automatically configure the instances and deploy services using Docker Compose on first boot.
+-   **Gitea:** `http://<server-ip>/gitea/` - Source code management
+-   **Jenkins:** `http://<server-ip>/jenkins/` - CI/CD automation
+-   **SonarQube:** `http://<server-ip>/sonarqube/` - Code quality and security analysis
+-   **Nexus:** `http://<server-ip>/nexus/` - Artifact repository
+-   **DefectDojo:** `http://<server-ip>:8083/` - Vulnerability management
 
-1.  **Navigate to the Terraform directory:**
-    ```bash
-    cd terraform
-    ```
+Additionally, some services are accessible directly:
 
-2.  **Initialize Terraform:**
-    ```bash
-    terraform init
-    ```
-    This downloads the necessary OCI provider plugin.
+-   **Gitea (direct):** `http://<server-ip>:3000/`
+-   **Jenkins (direct):** `http://<server-ip>:8080/jenkins/`
+-   **SonarQube (direct):** `http://<server-ip>:9000/`
+-   **Nexus (direct):** `http://<server-ip>:8081/`
+-   **Trivy API:** `http://<server-ip>:8084/`
+-   **PostgreSQL:** Port 5432 (accessible for database clients)
 
-3.  **Review the Plan:**
-    ```bash
-    terraform plan
-    ```
-    Review the proposed infrastructure changes. This should show 9 resources to be added (VCN, subnets, security lists, internet gateway, route table, and the two compute instances). Pay attention to the security list ingress rules to ensure the necessary ports (especially 22 for SSH and 80 for NGINX) are open from your IP or `0.0.0.0/0` for testing.
+### Docker Compose Configuration
 
-4.  **Apply the Configuration:**
-    ```bash
-    terraform apply
-    ```
-    Type `yes` when prompted to create the resources. Terraform will provision the VCN, subnets, security lists, and launch the two compute instances.
+The Docker Compose configuration defines all services, their dependencies, networks, and volumes. Key features include:
 
-5.  **Wait for Cloud-init to Complete:**
-    Once `terraform apply` finishes, the instances will begin booting. The cloud-init scripts embedded by Terraform will automatically run. This process involves:
-    -   Updating packages.
-    -   Installing Docker and the Docker Compose plugin.
-    -   Writing the `docker-compose.yml` and NGINX configuration files to `/opt/dsb-homelab/` (on dsb-node-01) and `/opt/dsb-hub/` (on dsb-hub).
-    -   Adding the `ubuntu` user to the `docker` group.
-    -   Pulling all necessary Docker images.
-    -   Starting all services using `docker compose up -d`.
+-   **Service Configuration:** Each service is configured with appropriate environment variables and volume mappings.
+-   **Persistent Storage:** Docker volumes are used to ensure data persistence across container restarts.
+-   **Network Isolation:** Services communicate through a dedicated Docker network.
+-   **Resource Management:** Services are configured with appropriate resource constraints.
 
-    This process can take **5-15 minutes** or longer depending on network speed and the number of images.
+### NGINX Configuration
 
-6.  **Verify Deployment (Optional but Recommended):**
-    -   After waiting, SSH into each instance using the public IPs provided in the `terraform apply` output (e.g., `ssh ubuntu@<dsb-node-01-public-ip>`).
-    -   Check the cloud-init logs: `cat /var/log/cloud-init-output.log`
-    -   Verify Docker is running: `systemctl status docker`
-    -   Check running containers: `docker ps`
+NGINX is configured as a reverse proxy to route requests to the appropriate services. The configuration includes:
 
-### Accessing the Lab
+-   **Path-based Routing:** Each service is accessible through a specific path (e.g., `/gitea/`, `/jenkins/`).
+-   **Header Management:** Appropriate headers are set for proxied requests.
+-   **Default Routing:** Requests to the root path are redirected to Gitea.
 
-Once cloud-init has completed and the containers are running, you can access the services via the public IP addresses of the instances using the NGINX reverse proxies.
+### Database Configuration
 
--   **dsb-node-01 (Monitoring & App):** `http://<dsb-node-01-public-ip>/`
-    -   Prometheus: `http://<dsb-node-01-public-ip>/prometheus/`
-    -   Grafana: `http://<dsb-node-01-public-ip>/grafana/`
-    -   Juice Shop: `http://<dsb-node-01-public-ip>/juiceshop/` *(Assuming the Nginx path is `/juiceshop/`. Adjust if different.)*
+PostgreSQL is used as the database for various services:
 
--   **dsb-hub (DevSecOps Tools):** `http://<dsb-hub-public-ip>/`
-    -   Gitea: `http://<dsb-hub-public-ip>/gitea/`
-    -   Jenkins: `http://<dsb-hub-public-ip>/jenkins/`
-    -   SonarQube: `http://<dsb-hub-public-ip>/sonarqube/`
-    -   Nexus: `http://<dsb-hub-public-ip>/nexus/`
-    -   Trivy API (if exposed via Nginx): `http://<dsb-hub-public-ip>/trivyapi/`
-
-*(Note: Replace `<dsb-node-01-public-ip>` and `<dsb-hub-public-ip>` with the actual IPs from your `terraform apply` output.)*
-
-### Post-Deployment Configuration (Important!)
-
-While cloud-init automates the initial setup, most of the web applications (Gitea, Jenkins, SonarQube, Grafana, Nexus) need to be configured *internally* to correctly handle being served under a sub-path by NGINX (e.g., `/gitea/` instead of `/`).
-
-You will likely need to SSH into the instances and configure each application's base URL or context path. Refer to the comments in the NGINX configuration files (`cloud-init/dsb-node-01.yaml` and `cloud-init/dsb-hub.yaml`) and the documentation for each specific tool for details on how to set their context paths or root URLs.
-
-For example:
--   **Grafana:** Ensure the `GF_SERVER_ROOT_URL` environment variable is set correctly (e.g., `http://<dsb-node-01-public-ip>/grafana/`). This is attempted in the cloud-init, but you may need to adjust the IP.
--   **Gitea:** Edit the `app.ini` file inside the Gitea container and set `ROOT_URL`.
--   **Jenkins:** Configure the "Jenkins URL" in the Jenkins web UI under "Manage Jenkins" -> "Configure System". You might also need a startup parameter.
--   **SonarQube:** Set the `sonar.web.context` property.
--   **Nexus:** Configure the context path in its properties file.
-
-Failure to perform these steps will result in broken links and incorrect behavior when accessing the applications via NGINX.
+-   **SonarQube Database:** Stores SonarQube analysis data.
+-   **DefectDojo Database:** Stores vulnerability management data.
+-   **Application Database:** A separate PostgreSQL instance (postgres-todo) is available for application development.
 
 ### What You'll Learn
 
-By completing this project, you will gain hands-on experience in:
+By working with this DevSecOps homelab, you will gain hands-on experience in:
 
--   **Infrastructure as Code:** Using Terraform to provision cloud resources (OCI).
--   **Cloud-init:** Automating server configuration on first boot.
 -   **Docker & Docker Compose:** Deploying and managing multi-container applications.
 -   **Containerization:** Understanding isolated application environments.
--   **Web Traffic Management:** Configuring Nginx as a reverse proxy.
--   **Monitoring:** Setting up Prometheus and Grafana.
--   **Security Scanning:** Integrating tools like SonarQube and Trivy.
--   **CI/CD Fundamentals:** Working with Jenkins.
--   **Artifact Management:** Using Nexus.
+-   **Web Traffic Management:** Configuring NGINX as a reverse proxy.
+-   **Security Scanning:** Using tools like SonarQube and Trivy.
+-   **CI/CD Fundamentals:** Working with Jenkins pipelines.
+-   **Artifact Management:** Using Nexus for dependency and artifact management.
+-   **Vulnerability Management:** Using DefectDojo to track and manage vulnerabilities.
+-   **Database Management:** Working with PostgreSQL databases.
 
-### Cleanup
+### Maintenance and Troubleshooting
 
-To destroy the resources created by Terraform and avoid incurring costs, navigate back to the `terraform` directory and run:
+#### Common Tasks
 
+-   **Viewing Logs:** `docker logs <container_name>`
+-   **Restarting Services:** `docker restart <container_name>`
+-   **Checking Service Status:** `docker ps`
+-   **Accessing Container Shell:** `docker exec -it <container_name> bash`
+
+#### Volume Management
+
+All data is stored in Docker volumes to ensure persistence. You can list volumes with:
 ```bash
-terraform destroy
+docker volume ls
 ```
-Type `yes` when prompted. This will tear down all the infrastructure components created by your Terraform configuration.
+
+#### Network Management
+
+Services communicate through a Docker network. You can inspect the network with:
+```bash
+docker network inspect dsb-hub_devsecops
+```
+
+### Future Enhancements
+
+Potential enhancements for this homelab include:
+
+-   **SSL/TLS Configuration:** Adding HTTPS support with Let's Encrypt.
+-   **Authentication Integration:** Implementing SSO across services.
+-   **Monitoring and Alerting:** Adding Prometheus and Grafana for monitoring.
+-   **CI/CD Pipeline Examples:** Creating example pipelines for common scenarios.
+-   **Infrastructure as Code:** Adding Terraform configurations for cloud deployment.
 
 ### Contributing
 
-*(Optional: Add information on how others can contribute if this is a public repository)*
-
-### License
-
-*(Optional: Add license information)*
+Contributions to improve the DevSecOps homelab are welcome! Please feel free to submit pull requests or open issues for any improvements or bug fixes.
 
 ---
 
